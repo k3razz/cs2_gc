@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-
-project(csgo_gc)
+project(cs2_gc)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -33,23 +32,17 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(GC_EXE_SUFFIX "_win64")
     endif()
 else()
-    message(FATAL_ERROR "Unsupported system $[CMAKE_SYSTEM_NAME}")
+    message(FATAL_ERROR "Unsupported system ${CMAKE_SYSTEM_NAME}")
 endif()
 
 if (MSVC)
-    # statically linked crt
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     add_compile_options(-fpic -fvisibility=hidden)
-
     if (NOT APPLE)
         add_link_options(-Wl,--no-undefined -z noexecstack)
     endif()
 endif()
-
-add_subdirectory(csgo_gc)
-add_subdirectory(launcher)
-add_subdirectory(steamworks)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
@@ -65,11 +58,22 @@ option(protobuf_BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 option(protobuf_WITH_ZLIB "Build with zlib support" OFF)
 
 FetchContent_Declare(protobuf
-	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf
-	GIT_TAG 2798a968c330de223b711e4fe504800280f333fb
-	GIT_SHALLOW TRUE)
+    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf
+    GIT_TAG 2798a968c330de223b711e4fe504800280f333fb
+    GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(protobuf)
+
+#-------------------------------------------------
+# nlohmann-json
+#-------------------------------------------------
+
+FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json
+    GIT_TAG v3.11.3
+    GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(nlohmann_json)
 
 #-------------------------------------------------
 # cryptopp-cmake
@@ -79,13 +83,12 @@ option(CRYPTOPP_BUILD_TESTING "Build library tests" OFF)
 option(CRYPTOPP_INSTALL "Generate the install target for this project." OFF)
 
 FetchContent_Declare(cryptopp-cmake
-	GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake
-	GIT_SHALLOW TRUE)
+    GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake
+    GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(cryptopp-cmake)
 
 if (MSVC)
-    # shut the fuck up
     target_compile_definitions(cryptopp PRIVATE _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 endif()
 
@@ -98,7 +101,30 @@ option(FUNCHOOK_BUILD_TESTS "Build tests" OFF)
 option(FUNCHOOK_INSTALL "Install Funchook" OFF)
 
 FetchContent_Declare(funchook
-	GIT_REPOSITORY https://github.com/kubo/funchook
-	GIT_SHALLOW TRUE)
+    GIT_REPOSITORY https://github.com/kubo/funchook
+    GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(funchook)
+
+#-------------------------------------------------
+# GC_Core
+#-------------------------------------------------
+
+add_subdirectory(src/gc)
+add_subdirectory(src/injector)
+
+#-------------------------------------------------
+# Установка
+#-------------------------------------------------
+
+if(DEFINED OUTDIR)
+    install(TARGETS GC_Core Injector
+        RUNTIME DESTINATION ${OUTDIR}
+        LIBRARY DESTINATION ${OUTDIR}
+    )
+    
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/config.json 
+         DESTINATION ${OUTDIR})
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/resources/schema_2026.json 
+         DESTINATION ${OUTDIR})
+endif()
