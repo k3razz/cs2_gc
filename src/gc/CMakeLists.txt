@@ -1,3 +1,5 @@
+find_package(Protobuf REQUIRED)
+
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
     ${CMAKE_CURRENT_SOURCE_DIR}/protobufs/cs2_gc.proto
 )
