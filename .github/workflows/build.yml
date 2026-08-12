@@ -1,10 +1,11 @@
-name: Build CS2-Local-GC
+name: Build GC
 
 on:
   push:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,64 +14,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create release directory
-        run: mkdir ${{ github.workspace }}\release
-
-      - name: Setup vcpkg
+      - name: Install vcpkg
         shell: cmd
         run: |
-          git clone https://github.com/Microsoft/vcpkg.git %CD%\vcpkg
-          %CD%\vcpkg\bootstrap-vcpkg.bat
-          %CD%\vcpkg\vcpkg install --triplet x64-windows
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install --triplet x64-windows
+
+      - name: Create release directory
+        run: mkdir ${{ github.workspace }}\release
 
       - name: Configure CMake
         shell: cmd
         run: |
-          cmake -A x64 -T v142 ^
+          cmake -A x64 ^
             -B ${{ github.workspace }}\build ^
             -S ${{ github.workspace }} ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+            -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
             -DVCPKG_TARGET_TRIPLET=x64-windows ^
-            -DOUTDIR=${{ github.workspace }}\release
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
-          cmake --build ${{ github.workspace }}\build --config Release --target Injector GC_Core
+          cmake --build ${{ github.workspace }}\build --config Release
 
-      - name: Package files
-        shell: bash
+      - name: Copy binaries
+        shell: cmd
         run: |
-          cp README.md release/
-          mkdir -p release/licenses
-          cp LICENSE release/licenses/LICENSE-cs2-local-gc.txt
-          cp build/_deps/protobuf-src/LICENSE release/licenses/LICENSE-protobuf.txt
-          cp build/_deps/nlohmann_json-src/LICENSE.MIT release/licenses/LICENSE-json.txt
-          cp config.json release/
-          cp resources/schema_2026.json release/
-          mkdir -p release/cs2_gc
-          cp examples/config.txt release/cs2_gc/
-          cp examples/inventory.txt release/cs2_gc/
+          copy build\Release\*.dll release\
+          copy config.json release\
+          copy resources\schema_2026.json release\
 
       - name: Create ZIP
         shell: pwsh
         run: |
           Compress-Archive `
             -Path "$env:GITHUB_WORKSPACE\release\*" `
-            -DestinationPath "$env:GITHUB_WORKSPACE\cs2-local-gc-windows.zip" `
+            -DestinationPath "$env:GITHUB_WORKSPACE\cs2_gc.zip" `
             -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cs2-local-gc-windows
-          path: ${{ github.workspace }}\cs2-local-gc-windows.zip
+          name: cs2_gc
+          path: ${{ github.workspace }}\cs2_gc.zip
 
   publish:
     if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -90,14 +82,14 @@ jobs:
 
           if [ -n "$FILE" ]; then
             gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes || true
-            sleep 10
+            sleep 5
 
             gh release create "$TAG" \
               --repo "$REPO" \
               --title "Continuous Build" \
-              --notes ""
+              --notes "" \
+              --target "$SHA"
 
-
-
+            # Загружаем ZIP
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           fi
