@@ -5,7 +5,8 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
- 
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: windows-2022
@@ -19,7 +20,7 @@ jobs:
       - name: Configure CMake
         shell: cmd
         run: |
-          cmake -A Win32 -T v142 ^
+          cmake -A x64 ^
             -B ${{ github.workspace }}\build ^
             -S ${{ github.workspace }} ^
             -DCMAKE_BUILD_TYPE=Release ^
@@ -27,42 +28,32 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build ${{ github.workspace }}\build --config Release --target csgo srcds csgo_gc
+          cmake --build ${{ github.workspace }}\build --config Release
 
-      - name: Package files
-        shell: bash
+      - name: Copy files
+        shell: cmd
         run: |
-          cp README.md release/
-          mkdir -p release/licenses
-          cp LICENSE release/licenses/LICENSE-csgo_gc.txt
-          cp build/_deps/cryptopp-cmake-build/cryptopp/License.txt release/licenses/LICENSE-crypto++.txt
-          cp build/_deps/distorm-src/COPYING release/licenses/LICENSE-distorm.txt
-          cp build/_deps/funchook-src/LICENSE release/licenses/LICENSE-funchook.txt
-          cp build/_deps/protobuf-src/LICENSE release/licenses/LICENSE-protobuf.txt
-          cp examples/config.txt release/csgo_gc/
-          cp examples/inventory.txt release/csgo_gc/
-          cp examples/price_sheet.txt release/csgo_gc/
-          cp examples/unusual_loot_lists.txt release/csgo_gc/
+          copy config.json release\
+          copy resources\schema_2026.json release\
 
       - name: Create ZIP
         shell: pwsh
         run: |
           Compress-Archive `
             -Path "$env:GITHUB_WORKSPACE\release\*" `
-            -DestinationPath "$env:GITHUB_WORKSPACE\csgo_gc-windows.zip" `
+            -DestinationPath "$env:GITHUB_WORKSPACE\cs2_gc.zip" `
             -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: csgo_gc-windows
-          path: ${{ github.workspace }}\csgo_gc-windows.zip
+          name: cs2_gc
+          path: ${{ github.workspace }}\cs2_gc.zip
 
   publish:
     if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -71,7 +62,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Continuous Release
+      - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -82,12 +73,12 @@ jobs:
 
           if [ -n "$FILE" ]; then
             gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes || true
-            sleep 10
+            sleep 5
 
             gh release create "$TAG" \
               --repo "$REPO" \
               --title "Continuous Build" \
-              --notes "$SHA" \
+              --notes "" \
               --target "$SHA"
 
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
