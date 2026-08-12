@@ -14,6 +14,6 @@ target_link_libraries(Injector
 
 if (WIN32)
     target_link_libraries(Injector
-        detours
+        funchook
     )
 endif()
