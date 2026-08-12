@@ -1,0 +1,89 @@
+syntax = "proto3";
+package CS2GC;
+
+message CMsgClientHello {
+    uint32 client_version = 1;
+    uint64 steam_id = 2;
+}
+
+message CMsgClientWelcome {
+    uint32 server_version = 1;
+    uint64 session_id = 2;
+    uint32 inventory_size = 3;
+}
+
+message CMsgItem {
+    uint64 item_id = 1;
+    uint32 def_index = 2;
+    uint32 paint_seed = 3;
+    float wear = 4;
+    uint32 stattrak_count = 5;
+    repeated uint32 sticker_slots = 6;
+    bool equipped = 7;
+}
+
+message CMsgInventoryFullRefresh {
+    repeated CMsgItem items = 1;
+}
+
+message CMsgEquipItem {
+    uint64 item_id = 1;
+    bool equipped = 2;
+}
+
+message CMsgUnlockCrate {
+    uint32 crate_def_index = 1;
+    uint32 key_def_index = 2;
+}
+
+message CMsgUnlockCrateResponse {
+    CMsgItem item = 1;
+}
+
+message CMsgStorePurchase {
+    uint32 def_index = 1;
+    uint32 price = 2;
+}
+
+message CMsgStorePurchaseResponse {
+    bool success = 1;
+    CMsgItem item = 2;
+}
+
+message CMsgApplySticker {
+    uint64 item_id = 1;
+    uint32 sticker_def_index = 2;
+    uint32 sticker_slot = 3;
+}
+
+message CMsgRemoveSticker {
+    uint64 item_id = 1;
+    uint32 sticker_slot = 2;
+}
+
+message CMsgNameTag {
+    uint64 item_id = 1;
+    string name_tag = 2;
+}
+
+message CMsgStatTrakSwap {
+    uint64 source_item_id = 1;
+    uint64 target_item_id = 2;
+}
+
+message CMsgGraffiti {
+    uint32 graffiti_def_index = 1;
+}
+
+message CMsgMusicKit {
+    uint32 music_kit_def_index = 1;
+}
+
+message CMsgPatchApply {
+    uint64 item_id = 1;
+    uint32 patch_def_index = 2;
+}
+
+message CMsgSouvenir {
+    uint32 souvenir_def_index = 1;
+}
