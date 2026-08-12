@@ -1,0 +1,31 @@
+{
+    "weapons": [
+        {"def_index": 1, "name": "AK-47 | Redline", "rarity": 4, "stattrak": true},
+        {"def_index": 2, "name": "M4A4 | Howl", "rarity": 5, "stattrak": true},
+        {"def_index": 3, "name": "AWP | Dragon Lore", "rarity": 5, "stattrak": true},
+        {"def_index": 4, "name": "Desert Eagle | Blaze", "rarity": 4, "stattrak": false},
+        {"def_index": 5, "name": "USP-S | Kill Confirmed", "rarity": 4, "stattrak": true},
+        {"def_index": 6, "name": "Glock-18 | Fade", "rarity": 5, "stattrak": true},
+        {"def_index": 7, "name": "M4A1-S | Hyper Beast", "rarity": 4, "stattrak": true},
+        {"def_index": 8, "name": "AWP | Gungnir", "rarity": 5, "stattrak": true},
+        {"def_index": 9, "name": "AK-47 | Fire Serpent", "rarity": 5, "stattrak": true},
+        {"def_index": 10, "name": "P250 | Splash", "rarity": 3, "stattrak": false}
+    ],
+    "cases": [
+        {"def_index": 1001, "name": "Operation Bravo Case"},
+        {"def_index": 1002, "name": "Chroma Case"},
+        {"def_index": 1003, "name": "Spectrum Case"},
+        {"def_index": 1004, "name": "Prisma Case"},
+        {"def_index": 1005, "name": "Glove Case"}
+    ],
+    "stickers": [
+        {"def_index": 2001, "name": "Team Liquid | Katowice 2026"},
+        {"def_index": 2002, "name": "Natus Vincere | Cologne 2026"},
+        {"def_index": 2003, "name": "FaZe Clan | Major 2026"}
+    ],
+    "tools": [
+        {"def_index": 3001, "name": "StatTrak Swap Tool"},
+        {"def_index": 3002, "name": "Name Tag"},
+        {"def_index": 3003, "name": "Souvenir Token"}
+    ]
+}
