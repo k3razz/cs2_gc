@@ -1,3 +1,5 @@
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 cmake_minimum_required(VERSION 3.20)
 project(cs2_gc)
 
