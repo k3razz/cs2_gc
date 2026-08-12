@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "../gc_server.h"
+#include "../../../include/gc_api.h"
 
 namespace CS2GC {
 
@@ -9,8 +9,8 @@ public:
     static StoreManager& Instance();
     
     void Init(const std::string& config_path);
-    Item OpenCrate(uint32_t crate_def_index, uint32_t key_def_index);
-    Item PurchaseItem(uint32_t def_index);
+    GCItem OpenCrate(uint32_t crate_def_index, uint32_t key_def_index);
+    GCItem PurchaseItem(uint32_t def_index);
     uint32_t GetPrice(uint32_t def_index);
     uint32_t GetCurrency();
     void AddCurrency(uint32_t amount);
