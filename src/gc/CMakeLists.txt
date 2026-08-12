@@ -25,7 +25,6 @@ target_link_libraries(GC_Core
 
 if (WIN32)
     target_link_libraries(GC_Core
-        detours
         ws2_32
         crypt32
     )
