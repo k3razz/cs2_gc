@@ -14,13 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies via vcpkg (classic mode)
+      - name: Install vcpkg
         shell: cmd
         run: |
           git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
           C:\vcpkg\bootstrap-vcpkg.bat
-          C:\vcpkg\vcpkg integrate install
-          C:\vcpkg\vcpkg install protobuf:x64-windows nlohmann-json:x64-windows detours:x64-windows
+          C:\vcpkg\vcpkg install protobuf nlohmann-json detours --triplet x64-windows
 
       - name: Create release directory
         run: mkdir ${{ github.workspace }}\release
@@ -34,25 +33,32 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
             -DVCPKG_TARGET_TRIPLET=x64-windows ^
             -DCMAKE_BUILD_TYPE=Release ^
+            -DDETOURS_ROOT=C:\vcpkg\packages\detours_x64-windows ^
             -DOUTDIR=${{ github.workspace }}\release
 
       - name: Build
         run: |
           cmake --build ${{ github.workspace }}\build --config Release
 
-      - name: Package
+      - name: Copy files
         shell: cmd
         run: |
           copy config.json release\
           copy resources\schema_2026.json release\
-          cd release
-          powershell Compress-Archive -Path * -DestinationPath ..\cs2_gc.zip
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "$env:GITHUB_WORKSPACE\release\*" `
+            -DestinationPath "$env:GITHUB_WORKSPACE\cs2_gc.zip" `
+            -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cs2_gc
-          path: cs2_gc.zip
+          path: ${{ github.workspace }}\cs2_gc.zip
 
   publish:
     if: github.event_name != 'pull_request'
@@ -66,7 +72,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish
+      - name: Publish Continuous Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -78,6 +84,12 @@ jobs:
           if [ -n "$FILE" ]; then
             gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes || true
             sleep 5
-            gh release create "$TAG" --repo "$REPO" --title "Continuous Build" --notes "" --target "$SHA"
+
+            gh release create "$TAG" \
+              --repo "$REPO" \
+              --title "Continuous Build" \
+              --notes "" \
+              --target "$SHA"
+
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           fi
