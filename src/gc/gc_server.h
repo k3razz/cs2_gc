@@ -4,27 +4,27 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include "../../include/gc_api.h"
 
 namespace CS2GC {
 
-struct Item {
-    uint64_t item_id;
-    uint32_t def_index;
-    uint32_t paint_seed;
-    float wear;
-    uint32_t stattrak_count;
-    std::vector<uint32_t> sticker_slots;
-    bool equipped;
-};
-
-class GCServer {
+class GCServer : public IGameCoordinator {
 public:
     static GCServer& Instance();
     
-    void Init(const std::string& config_path);
-    void Shutdown();
-    void ProcessMessage(uint32_t msg_type, const std::string& data);
-    void SendToClient(uint32_t msg_type, const std::string& data);
+    void Initialize(const std::string& config_path) override;
+    void Shutdown() override;
+    void ProcessMessage(uint32_t msg_type, const void* data, uint32_t size) override;
+    std::vector<GCItem> GetInventory() override;
+    void AddItem(const GCItem& item) override;
+    void RemoveItem(uint64_t item_id) override;
+    void EquipItem(uint64_t item_id, bool equipped) override;
+    
+private:
+    GCServer() = default;
+    ~GCServer() = default;
+    GCServer(const GCServer&) = delete;
+    GCServer& operator=(const GCServer&) = delete;
     
     void HandleHello(const std::string& data);
     void HandleWelcome(const std::string& data);
@@ -41,14 +41,10 @@ public:
     void HandlePatchApply(const std::string& data);
     void HandleSouvenir(const std::string& data);
     
-private:
-    GCServer() = default;
-    ~GCServer() = default;
-    GCServer(const GCServer&) = delete;
-    GCServer& operator=(const GCServer&) = delete;
+    void SendToClient(uint32_t msg_type, const std::string& data);
     
     std::unordered_map<uint32_t, std::function<void(const std::string&)>> handlers_;
-    std::vector<Item> inventory_;
+    std::vector<GCItem> inventory_;
     uint64_t next_item_id_;
     uint64_t session_id_;
     uint32_t currency_;
