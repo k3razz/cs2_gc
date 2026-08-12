@@ -1,0 +1,12 @@
+{
+  "name": "cs2-local-gc",
+  "version": "1.0.0",
+  "dependencies": [
+    "protobuf",
+    "nlohmann-json",
+    "detours",
+    "openssl",
+    "zlib"
+  ],
+  "builtin-baseline": "a42f4b9c60b4c9f3e4b2c1d5e6f7a8b9c0d1e2f3"
+}
