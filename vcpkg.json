@@ -5,6 +5,5 @@
     "protobuf",
     "nlohmann-json",
     "detours"
-  ],
-  "builtin-baseline": "5e0baeb7d2dd0aa9fdc016ef706b08af4f2a2f06"
+  ]
 }

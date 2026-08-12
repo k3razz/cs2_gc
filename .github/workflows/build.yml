@@ -14,12 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install vcpkg manually
+      - name: Install dependencies via vcpkg (classic mode)
         shell: cmd
         run: |
           git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
           C:\vcpkg\bootstrap-vcpkg.bat
-          C:\vcpkg\vcpkg install --triplet x64-windows
+          C:\vcpkg\vcpkg integrate install
+          C:\vcpkg\vcpkg install protobuf:x64-windows nlohmann-json:x64-windows detours:x64-windows
 
       - name: Create release directory
         run: mkdir ${{ github.workspace }}\release
@@ -39,25 +40,19 @@ jobs:
         run: |
           cmake --build ${{ github.workspace }}\build --config Release
 
-      - name: Copy additional files
+      - name: Package
         shell: cmd
         run: |
           copy config.json release\
           copy resources\schema_2026.json release\
-
-      - name: Create ZIP
-        shell: pwsh
-        run: |
-          Compress-Archive `
-            -Path "$env:GITHUB_WORKSPACE\release\*" `
-            -DestinationPath "$env:GITHUB_WORKSPACE\cs2_gc.zip" `
-            -Force
+          cd release
+          powershell Compress-Archive -Path * -DestinationPath ..\cs2_gc.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cs2_gc
-          path: ${{ github.workspace }}\cs2_gc.zip
+          path: cs2_gc.zip
 
   publish:
     if: github.event_name != 'pull_request'
@@ -71,7 +66,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish Continuous Release
+      - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -83,12 +78,6 @@ jobs:
           if [ -n "$FILE" ]; then
             gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes || true
             sleep 5
-
-            gh release create "$TAG" \
-              --repo "$REPO" \
-              --title "Continuous Build" \
-              --notes "" \
-              --target "$SHA"
-
+            gh release create "$TAG" --repo "$REPO" --title "Continuous Build" --notes "" --target "$SHA"
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           fi
