@@ -7,8 +7,9 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 find_package(Protobuf REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(detours REQUIRED)
-find_package(OpenSSL REQUIRED)
+
+find_path(DETOURS_INCLUDE_DIRS detours/detours.h)
+find_library(DETOURS_LIBRARY detours)
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gc/protobufs/cs2_gc.proto
@@ -29,14 +30,13 @@ target_include_directories(GC_Core PRIVATE
     include 
     src 
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${DETOURS_INCLUDE_DIRS}
 )
 
 target_link_libraries(GC_Core 
-    detours 
+    ${DETOURS_LIBRARY}
     nlohmann_json::nlohmann_json 
     protobuf::libprotobuf 
-    OpenSSL::SSL
-    OpenSSL::Crypto
     ws2_32
     crypt32
 )
@@ -46,9 +46,13 @@ add_library(Injector SHARED
     src/injector/hook.cpp
 )
 
+target_include_directories(Injector PRIVATE
+    ${DETOURS_INCLUDE_DIRS}
+)
+
 target_link_libraries(Injector 
     GC_Core 
-    detours
+    ${DETOURS_LIBRARY}
 )
 
 if(DEFINED OUTDIR)
