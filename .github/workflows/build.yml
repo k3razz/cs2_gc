@@ -1,0 +1,89 @@
+name: Continuous Build CS2-Local-GC
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write 
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Cache vcpkg
+      uses: actions/cache@v3
+      id: cache-vcpkg
+      with:
+        path: ${{ env.VCPKG_ROOT }}
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+
+    - name: Install vcpkg
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git $env:VCPKG_ROOT
+        & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
+      shell: pwsh
+
+    - name: Install dependencies
+      run: |
+        & "$env:VCPKG_ROOT\vcpkg" install --triplet x64-windows
+      shell: pwsh
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{ github.workspace }}/build `
+              -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+              -DVCPKG_TARGET_TRIPLET=x64-windows
+      shell: pwsh
+
+    - name: Build
+      run: |
+        cmake --build ${{ github.workspace }}/build `
+              --config ${{ env.BUILD_TYPE }} `
+              --parallel 4
+      shell: pwsh
+
+    - name: Prepare artifacts
+      run: |
+        mkdir ${{ github.workspace }}/artifacts
+        copy ${{ github.workspace }}/build/Release/*.dll ${{ github.workspace }}/artifacts/
+        copy ${{ github.workspace }}/config.json ${{ github.workspace }}/artifacts/
+        copy ${{ github.workspace }}/resources/schema_2026.json ${{ github.workspace }}/artifacts/
+        copy ${{ github.workspace }}/README.md ${{ github.workspace }}/artifacts/
+        # Дополнительно пакуем в ZIP
+        Compress-Archive -Path ${{ github.workspace }}/artifacts/* -DestinationPath ${{ github.workspace }}/CS2-Local-GC-Build.zip
+      shell: pwsh
+
+    - name: Upload artifacts (CI)
+      uses: actions/upload-artifact@v4
+      with:
+        name: CS2-Local-GC-Windows-x64
+        path: ${{ github.workspace }}/artifacts/
+        retention-days: 30
+
+    - name: Create Continuous Release
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: continuous-latest
+        name: "Continuous Build"
+        body: |
+          **Commit:** ${{ github.sha }}
