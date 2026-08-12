@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "../gc_server.h"
+#include "../../../include/gc_api.h"
 
 namespace CS2GC {
 
@@ -11,11 +11,11 @@ public:
     
     void Load(const std::string& config_path);
     void Save();
-    std::vector<Item> GetAllItems();
-    void AddItem(const Item& item);
-    void UpdateItem(const Item& item);
+    std::vector<GCItem> GetAllItems();
+    void AddItem(const GCItem& item);
+    void UpdateItem(const GCItem& item);
     void RemoveItem(uint64_t item_id);
-    Item GetItem(uint64_t item_id);
+    GCItem GetItem(uint64_t item_id);
     uint32_t GetVersion() const;
     
 private:
@@ -24,7 +24,7 @@ private:
     InventoryManager(const InventoryManager&) = delete;
     InventoryManager& operator=(const InventoryManager&) = delete;
     
-    std::vector<Item> items_;
+    std::vector<GCItem> items_;
     std::string inventory_path_;
     uint32_t version_;
     bool loaded_;
