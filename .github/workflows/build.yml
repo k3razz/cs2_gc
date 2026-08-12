@@ -1,4 +1,4 @@
-name: Build-GC
+name: Build CS2-Local-GC
 
 on:
   push:
@@ -14,11 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          vcpkgJsonGlob: '**/vcpkg.json'
+      - name: Install vcpkg manually
+        shell: cmd
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install --triplet x64-windows
 
       - name: Create release directory
         run: mkdir ${{ github.workspace }}\release
@@ -29,7 +30,7 @@ jobs:
           cmake -A x64 ^
             -B ${{ github.workspace }}\build ^
             -S ${{ github.workspace }} ^
-            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+            -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
             -DVCPKG_TARGET_TRIPLET=x64-windows ^
             -DCMAKE_BUILD_TYPE=Release ^
             -DOUTDIR=${{ github.workspace }}\release
@@ -43,7 +44,6 @@ jobs:
         run: |
           copy config.json release\
           copy resources\schema_2026.json release\
-          copy README.md release\
 
       - name: Create ZIP
         shell: pwsh
