@@ -3,12 +3,16 @@ add_library(GC_Core SHARED
     inventory/manager.cpp
     inventory/schema.cpp
     store/store.cpp
-    protobufs/cs2_gc.pb.cc
+    protobufs/base_gcmessages.pb.cc
+    protobufs/econ_gcmessages.pb.cc
+    protobufs/cstrike15_gcmessages.pb.cc
+    protobufs/gcsdk_gcmessages.pb.cc
+    protobufs/steammessages_gc.pb.cc
+    protobufs/engine_gcmessages.pb.cc
 )
 
 target_include_directories(GC_Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/include
     ${_deps_protobuf-src}/src
 )
@@ -17,17 +21,6 @@ target_link_libraries(GC_Core
     protobuf::libprotobuf
     nlohmann_json::nlohmann_json
     cryptopp
+    ws2_32
+    crypt32
 )
-
-if (WIN32)
-    target_link_libraries(GC_Core
-        ws2_32
-        crypt32
-    )
-endif()
-
-if (UNIX)
-    target_link_libraries(GC_Core
-        pthread
-    )
-endif()
