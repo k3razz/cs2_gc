@@ -1,5 +1,3 @@
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
 cmake_minimum_required(VERSION 3.20)
 project(cs2_gc)
 
@@ -49,10 +47,6 @@ endif()
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
-#-------------------------------------------------
-# protobuf
-#-------------------------------------------------
-
 option(protobuf_INSTALL "Install protobuf binaries and files" OFF)
 option(protobuf_BUILD_TESTS "Build tests" OFF)
 option(protobuf_BUILD_PROTOC_BINARIES "Build libprotoc and protoc compiler" OFF)
@@ -66,20 +60,12 @@ FetchContent_Declare(protobuf
 
 FetchContent_MakeAvailable(protobuf)
 
-#-------------------------------------------------
-# nlohmann-json
-#-------------------------------------------------
-
 FetchContent_Declare(nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json
     GIT_TAG v3.11.3
     GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(nlohmann_json)
-
-#-------------------------------------------------
-# cryptopp-cmake
-#-------------------------------------------------
 
 option(CRYPTOPP_BUILD_TESTING "Build library tests" OFF)
 option(CRYPTOPP_INSTALL "Generate the install target for this project." OFF)
@@ -94,10 +80,6 @@ if (MSVC)
     target_compile_definitions(cryptopp PRIVATE _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 endif()
 
-#-------------------------------------------------
-# funchook
-#-------------------------------------------------
-
 option(FUNCHOOK_BUILD_SHARED "build shared library" OFF)
 option(FUNCHOOK_BUILD_TESTS "Build tests" OFF)
 option(FUNCHOOK_INSTALL "Install Funchook" OFF)
@@ -108,19 +90,10 @@ FetchContent_Declare(funchook
 
 FetchContent_MakeAvailable(funchook)
 
-#-------------------------------------------------
-# GC_Core
-#-------------------------------------------------
-
 add_subdirectory(src/gc)
-add_subdirectory(src/injector)
-
-#-------------------------------------------------
-# Установка
-#-------------------------------------------------
 
 if(DEFINED OUTDIR)
-    install(TARGETS GC_Core Injector
+    install(TARGETS GC_Core
         RUNTIME DESTINATION ${OUTDIR}
         LIBRARY DESTINATION ${OUTDIR}
     )
