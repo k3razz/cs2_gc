@@ -47,6 +47,7 @@ endif()
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
+# protobuf
 option(protobuf_INSTALL "Install protobuf binaries and files" OFF)
 option(protobuf_BUILD_TESTS "Build tests" OFF)
 option(protobuf_BUILD_PROTOC_BINARIES "Build libprotoc and protoc compiler" OFF)
@@ -60,6 +61,7 @@ FetchContent_Declare(protobuf
 
 FetchContent_MakeAvailable(protobuf)
 
+# nlohmann-json
 FetchContent_Declare(nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json
     GIT_TAG v3.11.3
@@ -67,6 +69,7 @@ FetchContent_Declare(nlohmann_json
 
 FetchContent_MakeAvailable(nlohmann_json)
 
+# cryptopp-cmake
 option(CRYPTOPP_BUILD_TESTING "Build library tests" OFF)
 option(CRYPTOPP_INSTALL "Generate the install target for this project." OFF)
 
@@ -80,6 +83,7 @@ if (MSVC)
     target_compile_definitions(cryptopp PRIVATE _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
 endif()
 
+# funchook
 option(FUNCHOOK_BUILD_SHARED "build shared library" OFF)
 option(FUNCHOOK_BUILD_TESTS "Build tests" OFF)
 option(FUNCHOOK_INSTALL "Install Funchook" OFF)
