@@ -8,14 +8,11 @@ target_include_directories(Injector PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(Injector
-    GC_Core
-)
-
-if (WIN32)
-    target_link_libraries(Injector
-        ws2_32
-    )
+find_library(GC_CORE_LIB GC_Core)
+if(GC_CORE_LIB)
+    target_link_libraries(Injector ${GC_CORE_LIB} ws2_32)
+else()
+    target_link_libraries(Injector GC_Core ws2_32)
 endif()
 
 add_dependencies(Injector GC_Core)
