@@ -21,28 +21,43 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
       
-      - name: Download missing proto dependencies
+      - name: Download ALL proto dependencies
         run: |
           mkdir -p src/gc/protobufs/google/protobuf
           mkdir -p src/gc/protobufs/steam
+          mkdir -p src/gc/protobufs/csgo
           
+          # Скачиваем все файлы из SteamTracking/Protobufs
           curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/google/protobuf/descriptor.proto -o src/gc/protobufs/google/protobuf/descriptor.proto
+          
           curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages.proto -o src/gc/protobufs/steam/steammessages.proto
           curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_base.proto -o src/gc/protobufs/steam/steammessages_base.proto
           curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_unified_base.proto -o src/gc/protobufs/steam/steammessages_unified_base.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_cloud.proto -o src/gc/protobufs/steam/steammessages_cloud.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_oauth.proto -o src/gc/protobufs/steam/steammessages_oauth.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_player.proto -o src/gc/protobufs/steam/steammessages_player.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_publishedfile.proto -o src/gc/protobufs/steam/steammessages_publishedfile.proto
+          
+          # Скачиваем все CS2 прото-файлы
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/csgo/base_gcmessages.proto -o src/gc/protobufs/base_gcmessages.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/csgo/cstrike15_gcmessages.proto -o src/gc/protobufs/cstrike15_gcmessages.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/csgo/econ_gcmessages.proto -o src/gc/protobufs/econ_gcmessages.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/csgo/engine_gcmessages.proto -o src/gc/protobufs/engine_gcmessages.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/csgo/gcsdk_gcmessages.proto -o src/gc/protobufs/gcsdk_gcmessages.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/csgo/steammessages_gc.proto -o src/gc/protobufs/steammessages_gc.proto
       
-      - name: Generate protobuf files
+      - name: Generate ALL protobuf files
         run: |
           protoc --cpp_out=src/gc/protobufs/ \
                  --proto_path=src/gc/protobufs/ \
                  --proto_path=src/gc/protobufs/steam \
                  --proto_path=src/gc/protobufs/google \
-                 src/gc/protobufs/*.proto || true
+                 src/gc/protobufs/*.proto 2>&1 || true
       
       - name: Commit all changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/gc/protobufs/
-          git diff --staged --quiet || git commit -m "Generate protobuf files from CS2 protos"
+          git diff --staged --quiet || git commit -m "Generate all CS2 protobuf files"
           git push
