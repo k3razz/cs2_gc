@@ -17,15 +17,5 @@
         {"def_index": 1003, "name": "Spectrum Case"},
         {"def_index": 1004, "name": "Prisma Case"},
         {"def_index": 1005, "name": "Glove Case"}
-    ],
-    "stickers": [
-        {"def_index": 2001, "name": "Team Liquid | Katowice 2026"},
-        {"def_index": 2002, "name": "Natus Vincere | Cologne 2026"},
-        {"def_index": 2003, "name": "FaZe Clan | Major 2026"}
-    ],
-    "tools": [
-        {"def_index": 3001, "name": "StatTrak Swap Tool"},
-        {"def_index": 3002, "name": "Name Tag"},
-        {"def_index": 3003, "name": "Souvenir Token"}
     ]
 }
