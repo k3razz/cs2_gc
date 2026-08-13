@@ -1,4 +1,4 @@
-name: Build CS2-Local-GC
+name: Build
 
 on:
   push:
@@ -33,6 +33,7 @@ jobs:
       - name: Copy files
         shell: cmd
         run: |
+          copy build\src\gc\Release\GC_Core.dll release\
           copy config.json release\
           copy resources\schema_2026.json release\
 
@@ -44,11 +45,17 @@ jobs:
             -DestinationPath "$env:GITHUB_WORKSPACE\cs2_gc.zip" `
             -Force
 
-      - name: Upload artifact
+      - name: Upload artifact (ZIP)
         uses: actions/upload-artifact@v4
         with:
           name: cs2_gc
           path: ${{ github.workspace }}\cs2_gc.zip
+
+      - name: Upload artifact (DLL)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GC_Core
+          path: ${{ github.workspace }}\release\GC_Core.dll
 
   publish:
     if: github.event_name != 'pull_request'
@@ -69,9 +76,10 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           TAG=continuous
-          FILE=$(find artifacts -name "*.zip")
+          ZIP_FILE=$(find artifacts -name "*.zip")
+          DLL_FILE=$(find artifacts -name "GC_Core.dll")
 
-          if [ -n "$FILE" ]; then
+          if [ -n "$ZIP_FILE" ] && [ -n "$DLL_FILE" ]; then
             gh release delete "$TAG" --cleanup-tag --repo "$REPO" --yes || true
             sleep 5
 
@@ -81,5 +89,6 @@ jobs:
               --notes "" \
               --target "$SHA"
 
-            gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+            gh release upload "$TAG" "$ZIP_FILE" --repo "$REPO" --clobber
+            gh release upload "$TAG" "$DLL_FILE" --repo "$REPO" --clobber
           fi
