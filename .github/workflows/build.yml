@@ -1,4 +1,4 @@
-name: Build
+name: Build CS2-Local-GC
 
 on:
   push:
@@ -62,7 +62,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish
+      - name: Publish Continuous Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
