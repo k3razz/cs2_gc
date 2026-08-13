@@ -1,8 +1,5 @@
 #include "schema.h"
-#include "../utils/logging.h"
-#include <nlohmann/json.hpp>
-#include <fstream>
-#include <random>
+#include <cstdio>
 
 namespace CS2GC {
 
@@ -92,7 +89,7 @@ void SchemaManager::LoadSchema() {
     store_prices_[3003] = 200;
     
     loaded_ = true;
-    Log("Schema loaded, items: %zu, crates: %zu", schema_.size(), crate_loot_.size());
+    printf("[GC] Schema loaded, items: %zu, crates: %zu\n", schema_.size(), crate_loot_.size());
 }
 
 ItemDef SchemaManager::GetItemDef(uint32_t def_index) {

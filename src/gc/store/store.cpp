@@ -1,8 +1,8 @@
 #include "store.h"
 #include "../inventory/schema.h"
-#include "../../utils/logging.h"
 #include <random>
 #include <chrono>
+#include <cstdio>
 
 namespace CS2GC {
 
@@ -18,17 +18,17 @@ void StoreManager::Init(const std::string& config_path) {
     currency_ = 999999;
     initialized_ = true;
     SchemaManager::Instance().LoadSchema();
-    Log("Store initialized, currency: %u", currency_);
+    printf("[GC] Store initialized, currency: %u\n", currency_);
 }
 
 GCItem StoreManager::OpenCrate(uint32_t crate_def_index, uint32_t key_def_index) {
     if (!SchemaManager::Instance().IsValidCrate(crate_def_index)) {
-        Log("Invalid crate: %u", crate_def_index);
+        printf("[GC] Invalid crate: %u\n", crate_def_index);
         return GCItem();
     }
     
     if (!HasKey(key_def_index)) {
-        Log("No key for crate: %u", crate_def_index);
+        printf("[GC] No key for crate: %u\n", crate_def_index);
         return GCItem();
     }
     
@@ -36,7 +36,7 @@ GCItem StoreManager::OpenCrate(uint32_t crate_def_index, uint32_t key_def_index)
     
     CrateLoot loot = SchemaManager::Instance().GetCrateLoot(crate_def_index);
     if (loot.item_defs.empty()) {
-        Log("Empty loot table for crate: %u", crate_def_index);
+        printf("[GC] Empty loot table for crate: %u\n", crate_def_index);
         return GCItem();
     }
     
@@ -65,7 +65,7 @@ GCItem StoreManager::OpenCrate(uint32_t crate_def_index, uint32_t key_def_index)
     new_item.stattrak_count = 0;
     new_item.equipped = false;
     
-    Log("Crate %u opened, got item %u (paint_seed: %u, wear: %.3f)", 
+    printf("[GC] Crate %u opened, got item %u (paint_seed: %u, wear: %.3f)\n", 
         crate_def_index, selected_def, new_item.paint_seed, new_item.wear);
     
     return new_item;
@@ -73,13 +73,13 @@ GCItem StoreManager::OpenCrate(uint32_t crate_def_index, uint32_t key_def_index)
 
 GCItem StoreManager::PurchaseItem(uint32_t def_index) {
     if (!SchemaManager::Instance().IsValidItem(def_index)) {
-        Log("Invalid item for purchase: %u", def_index);
+        printf("[GC] Invalid item for purchase: %u\n", def_index);
         return GCItem();
     }
     
     uint32_t price = GetPrice(def_index);
     if (currency_ < price) {
-        Log("Insufficient currency for item %u", def_index);
+        printf("[GC] Insufficient currency for item %u\n", def_index);
         return GCItem();
     }
     
@@ -91,7 +91,7 @@ GCItem StoreManager::PurchaseItem(uint32_t def_index) {
     new_item.stattrak_count = 0;
     new_item.equipped = false;
     
-    Log("Item %u purchased for %u currency", def_index, price);
+    printf("[GC] Item %u purchased for %u currency\n", def_index, price);
     return new_item;
 }
 
@@ -105,7 +105,7 @@ uint32_t StoreManager::GetCurrency() {
 
 void StoreManager::AddCurrency(uint32_t amount) {
     currency_ += amount;
-    Log("Added %u currency, total: %u", amount, currency_);
+    printf("[GC] Added %u currency, total: %u\n", amount, currency_);
 }
 
 bool StoreManager::HasKey(uint32_t key_def_index) {
@@ -113,7 +113,7 @@ bool StoreManager::HasKey(uint32_t key_def_index) {
 }
 
 void StoreManager::ConsumeKey(uint32_t key_def_index) {
-    Log("Key %u consumed", key_def_index);
+    printf("[GC] Key %u consumed\n", key_def_index);
 }
 
 }

@@ -1,7 +1,7 @@
 #include "manager.h"
-#include "../../utils/logging.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <cstdio>
 
 namespace CS2GC {
 
@@ -16,7 +16,7 @@ void InventoryManager::Load(const std::string& config_path) {
     inventory_path_ = config_path;
     std::ifstream config_file(config_path);
     if (!config_file.is_open()) {
-        Log("Config file not found: %s", config_path.c_str());
+        printf("[GC] Config file not found: %s\n", config_path.c_str());
         return;
     }
     
@@ -45,7 +45,7 @@ void InventoryManager::Load(const std::string& config_path) {
     
     version_ = 1;
     loaded_ = true;
-    Log("Inventory loaded, items: %zu", items_.size());
+    printf("[GC] Inventory loaded, items: %zu\n", items_.size());
 }
 
 void InventoryManager::Save() {
@@ -71,7 +71,7 @@ void InventoryManager::Save() {
     std::ofstream config_file(inventory_path_);
     if (config_file.is_open()) {
         config_file << config.dump(4);
-        Log("Inventory saved, items: %zu", items_.size());
+        printf("[GC] Inventory saved, items: %zu\n", items_.size());
     }
     
     version_++;

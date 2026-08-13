@@ -2,8 +2,8 @@
 #include "protobufs/cs2_gc.pb.h"
 #include "inventory/manager.h"
 #include "store/store.h"
-#include "../utils/logging.h"
 #include <chrono>
+#include <cstdio>
 
 namespace CS2GC {
 
@@ -39,14 +39,14 @@ void GCServer::Init(const std::string& config_path) {
     handlers_[13] = std::bind(&GCServer::HandlePatchApply, this, std::placeholders::_1);
     handlers_[14] = std::bind(&GCServer::HandleSouvenir, this, std::placeholders::_1);
     
-    Log("GCServer initialized");
+    printf("[GC] GCServer initialized\n");
 }
 
 void GCServer::Shutdown() {
     initialized_ = false;
     inventory_.clear();
     handlers_.clear();
-    Log("GCServer shutdown");
+    printf("[GC] GCServer shutdown\n");
 }
 
 void GCServer::ProcessMessage(uint32_t msg_type, const void* data, uint32_t size) {
@@ -55,12 +55,12 @@ void GCServer::ProcessMessage(uint32_t msg_type, const void* data, uint32_t size
     if (it != handlers_.end()) {
         it->second(raw_data);
     } else {
-        Log("Unhandled message type: %u", msg_type);
+        printf("[GC] Unhandled message type: %u\n", msg_type);
     }
 }
 
 void GCServer::SendToClient(uint32_t msg_type, const std::string& data) {
-    Log("Sending message type %u to client, size %zu", msg_type, data.size());
+    printf("[GC] Sending message type %u to client, size %zu\n", msg_type, data.size());
 }
 
 std::vector<GCItem> GCServer::GetInventory() {
@@ -95,7 +95,7 @@ void GCServer::EquipItem(uint64_t item_id, bool equipped) {
 void GCServer::HandleHello(const std::string& data) {
     CMsgClientHello hello;
     if (!hello.ParseFromString(data)) {
-        Log("Failed to parse CMsgClientHello");
+        printf("[GC] Failed to parse CMsgClientHello\n");
         return;
     }
     
@@ -107,11 +107,11 @@ void GCServer::HandleHello(const std::string& data) {
     std::string response;
     welcome.SerializeToString(&response);
     SendToClient(2, response);
-    Log("Client hello processed, steam_id: %llu", hello.steam_id());
+    printf("[GC] Client hello processed, steam_id: %llu\n", hello.steam_id());
 }
 
 void GCServer::HandleWelcome(const std::string& data) {
-    Log("Welcome message received");
+    printf("[GC] Welcome message received\n");
 }
 
 void GCServer::HandleInventoryRefresh(const std::string& data) {
@@ -134,24 +134,24 @@ void GCServer::HandleInventoryRefresh(const std::string& data) {
     std::string response;
     refresh.SerializeToString(&response);
     SendToClient(3, response);
-    Log("Inventory refresh sent, items: %zu", inventory_.size());
+    printf("[GC] Inventory refresh sent, items: %zu\n", inventory_.size());
 }
 
 void GCServer::HandleEquip(const std::string& data) {
     CMsgEquipItem equip;
     if (!equip.ParseFromString(data)) {
-        Log("Failed to parse CMsgEquipItem");
+        printf("[GC] Failed to parse CMsgEquipItem\n");
         return;
     }
     
     EquipItem(equip.item_id(), equip.equipped());
-    Log("Item %llu equipped: %d", equip.item_id(), equip.equipped());
+    printf("[GC] Item %llu equipped: %d\n", equip.item_id(), equip.equipped());
 }
 
 void GCServer::HandleUnlockCrate(const std::string& data) {
     CMsgUnlockCrate req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgUnlockCrate");
+        printf("[GC] Failed to parse CMsgUnlockCrate\n");
         return;
     }
     
@@ -171,16 +171,16 @@ void GCServer::HandleUnlockCrate(const std::string& data) {
         std::string response;
         resp.SerializeToString(&response);
         SendToClient(5, response);
-        Log("Crate unlocked, item: %u", new_item.def_index);
+        printf("[GC] Crate unlocked, item: %u\n", new_item.def_index);
     } else {
-        Log("Failed to unlock crate");
+        printf("[GC] Failed to unlock crate\n");
     }
 }
 
 void GCServer::HandleStorePurchase(const std::string& data) {
     CMsgStorePurchase req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgStorePurchase");
+        printf("[GC] Failed to parse CMsgStorePurchase\n");
         return;
     }
     
@@ -203,7 +203,7 @@ void GCServer::HandleStorePurchase(const std::string& data) {
             std::string response;
             resp.SerializeToString(&response);
             SendToClient(6, response);
-            Log("Store purchase success, item: %u", new_item.def_index);
+            printf("[GC] Store purchase success, item: %u\n", new_item.def_index);
         }
     } else {
         CMsgStorePurchaseResponse resp;
@@ -211,14 +211,14 @@ void GCServer::HandleStorePurchase(const std::string& data) {
         std::string response;
         resp.SerializeToString(&response);
         SendToClient(6, response);
-        Log("Store purchase failed, insufficient currency");
+        printf("[GC] Store purchase failed, insufficient currency\n");
     }
 }
 
 void GCServer::HandleApplySticker(const std::string& data) {
     CMsgApplySticker req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgApplySticker");
+        printf("[GC] Failed to parse CMsgApplySticker\n");
         return;
     }
     
@@ -227,7 +227,7 @@ void GCServer::HandleApplySticker(const std::string& data) {
             if (req.sticker_slot() < item.sticker_slots.size()) {
                 item.sticker_slots[req.sticker_slot()] = req.sticker_def_index();
                 InventoryManager::Instance().UpdateItem(item);
-                Log("Sticker applied to item %llu, slot %u", req.item_id(), req.sticker_slot());
+                printf("[GC] Sticker applied to item %llu, slot %u\n", req.item_id(), req.sticker_slot());
             }
             break;
         }
@@ -237,7 +237,7 @@ void GCServer::HandleApplySticker(const std::string& data) {
 void GCServer::HandleRemoveSticker(const std::string& data) {
     CMsgRemoveSticker req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgRemoveSticker");
+        printf("[GC] Failed to parse CMsgRemoveSticker\n");
         return;
     }
     
@@ -246,7 +246,7 @@ void GCServer::HandleRemoveSticker(const std::string& data) {
             if (req.sticker_slot() < item.sticker_slots.size()) {
                 item.sticker_slots[req.sticker_slot()] = 0;
                 InventoryManager::Instance().UpdateItem(item);
-                Log("Sticker removed from item %llu, slot %u", req.item_id(), req.sticker_slot());
+                printf("[GC] Sticker removed from item %llu, slot %u\n", req.item_id(), req.sticker_slot());
             }
             break;
         }
@@ -256,16 +256,16 @@ void GCServer::HandleRemoveSticker(const std::string& data) {
 void GCServer::HandleNameTag(const std::string& data) {
     CMsgNameTag req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgNameTag");
+        printf("[GC] Failed to parse CMsgNameTag\n");
         return;
     }
-    Log("Name tag applied to item %llu: %s", req.item_id(), req.name_tag().c_str());
+    printf("[GC] Name tag applied to item %llu: %s\n", req.item_id(), req.name_tag().c_str());
 }
 
 void GCServer::HandleStatTrakSwap(const std::string& data) {
     CMsgStatTrakSwap req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgStatTrakSwap");
+        printf("[GC] Failed to parse CMsgStatTrakSwap\n");
         return;
     }
     
@@ -292,43 +292,43 @@ void GCServer::HandleStatTrakSwap(const std::string& data) {
         }
     }
     
-    Log("StatTrak swap between %llu and %llu", req.source_item_id(), req.target_item_id());
+    printf("[GC] StatTrak swap between %llu and %llu\n", req.source_item_id(), req.target_item_id());
 }
 
 void GCServer::HandleGraffiti(const std::string& data) {
     CMsgGraffiti req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgGraffiti");
+        printf("[GC] Failed to parse CMsgGraffiti\n");
         return;
     }
-    Log("Graffiti applied: %u", req.graffiti_def_index());
+    printf("[GC] Graffiti applied: %u\n", req.graffiti_def_index());
 }
 
 void GCServer::HandleMusicKit(const std::string& data) {
     CMsgMusicKit req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgMusicKit");
+        printf("[GC] Failed to parse CMsgMusicKit\n");
         return;
     }
-    Log("Music kit equipped: %u", req.music_kit_def_index());
+    printf("[GC] Music kit equipped: %u\n", req.music_kit_def_index());
 }
 
 void GCServer::HandlePatchApply(const std::string& data) {
     CMsgPatchApply req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgPatchApply");
+        printf("[GC] Failed to parse CMsgPatchApply\n");
         return;
     }
-    Log("Patch applied: %u to item %llu", req.patch_def_index(), req.item_id());
+    printf("[GC] Patch applied: %u to item %llu\n", req.patch_def_index(), req.item_id());
 }
 
 void GCServer::HandleSouvenir(const std::string& data) {
     CMsgSouvenir req;
     if (!req.ParseFromString(data)) {
-        Log("Failed to parse CMsgSouvenir");
+        printf("[GC] Failed to parse CMsgSouvenir\n");
         return;
     }
-    Log("Souvenir applied: %u", req.souvenir_def_index());
+    printf("[GC] Souvenir applied: %u\n", req.souvenir_def_index());
 }
 
 }
