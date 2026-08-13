@@ -2,25 +2,13 @@
     "inventory": [
         {
             "id": 1,
-            "def_index": 1,
+            "def_index": 3,
             "paint_seed": 42,
-            "wear": 0.15,
-            "stattrak": 5,
-            "equipped": true,
-            "stickers": [2001, 2002]
-        },
-        {
-            "id": 2,
-            "def_index": 2,
-            "paint_seed": 128,
-            "wear": 0.08,
+            "wear": 0.02,
             "stattrak": 0,
-            "equipped": false,
+            "equipped": true,
             "stickers": []
         }
     ],
-    "currency": 999999,
-    "all_cases_unlocked": true,
-    "enable_stattrak": true,
-    "enable_stickers": true
+    "currency": 999999
 }
