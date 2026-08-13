@@ -21,12 +21,27 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
       
+      - name: Download missing proto dependencies
+        run: |
+          mkdir -p src/gc/protobufs/google/protobuf
+          mkdir -p src/gc/protobufs/steam
+          
+          # Скачиваем недостающие файлы из репозитория SteamTracking
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/google/protobuf/descriptor.proto -o src/gc/protobufs/google/protobuf/descriptor.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages.proto -o src/gc/protobufs/steam/steammessages.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_base.proto -o src/gc/protobufs/steam/steammessages_base.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_unified_base.proto -o src/gc/protobufs/steam/steammessages_unified_base.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_cloud.proto -o src/gc/protobufs/steam/steammessages_cloud.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_oauth.proto -o src/gc/protobufs/steam/steammessages_oauth.proto
+          curl -L https://raw.githubusercontent.com/SteamTracking/Protobufs/master/steam/steammessages_player.proto -o src/gc/protobufs/steam/steammessages_player.proto
+      
       - name: Generate protobuf files
         run: |
-          mkdir -p src/gc/protobufs
           protoc --cpp_out=src/gc/protobufs/ \
                  --proto_path=src/gc/protobufs/ \
-                 src/gc/protobufs/*.proto
+                 --proto_path=src/gc/protobufs/steam \
+                 --proto_path=src/gc/protobufs/google \
+                 src/gc/protobufs/*.proto || true
       
       - name: Check if files changed
         id: check
@@ -43,5 +58,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/gc/protobufs/*.pb.cc src/gc/protobufs/*.pb.h
-          git commit -m "Generate protobuf files from cs2_gc.proto"
+          git commit -m "Generate protobuf files from CS2 protos"
           git push
