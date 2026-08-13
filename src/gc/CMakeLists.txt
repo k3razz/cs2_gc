@@ -3,12 +3,6 @@ add_library(GC_Core SHARED
     inventory/manager.cpp
     inventory/schema.cpp
     store/store.cpp
-    protobufs/base_gcmessages.pb.cc
-    protobufs/econ_gcmessages.pb.cc
-    protobufs/cstrike15_gcmessages.pb.cc
-    protobufs/gcsdk_gcmessages.pb.cc
-    protobufs/steammessages_gc.pb.cc
-    protobufs/engine_gcmessages.pb.cc
 )
 
 target_include_directories(GC_Core PRIVATE
