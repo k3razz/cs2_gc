@@ -3,8 +3,8 @@ add_library(GC_Core SHARED
     inventory/manager.cpp
     inventory/schema.cpp
     store/store.cpp
-    ../utils/logging.cpp
-    ../utils/crypto.cpp
+    ${CMAKE_SOURCE_DIR}/src/utils/logging.cpp
+    ${CMAKE_SOURCE_DIR}/src/utils/crypto.cpp
     protobufs/cs2_gc.pb.cc
 )
 
