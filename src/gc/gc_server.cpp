@@ -1,18 +1,33 @@
 #include "gc_server.h"
-#include "protobufs/cs2_gc.pb.h"
+#include "protobufs/base_gcmessages.pb.h"
+#include "protobufs/econ_gcmessages.pb.h"
+#include "protobufs/cstrike15_gcmessages.pb.h"
+#include "protobufs/gcsdk_gcmessages.pb.h"
 #include "inventory/manager.h"
 #include "store/store.h"
 #include <chrono>
 #include <cstdio>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 namespace CS2GC {
+
+void Log(const char* format, ...) {
+    char buffer[1024];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    printf("[GC] %s\n", buffer);
+    fflush(stdout);
+}
 
 GCServer& GCServer::Instance() {
     static GCServer instance;
     return instance;
 }
 
-void GCServer::Init(const std::string& config_path) {
+void GCServer::Initialize(const std::string& config_path) {
     if (initialized_) return;
     
     next_item_id_ = 1000;
@@ -20,33 +35,29 @@ void GCServer::Init(const std::string& config_path) {
     currency_ = 999999;
     inventory_version_ = 1;
     initialized_ = true;
+    inventory_path_ = config_path;
     
+    LoadInventory(config_path);
     InventoryManager::Instance().Load(config_path);
     StoreManager::Instance().Init(config_path);
     
-    handlers_[1] = std::bind(&GCServer::HandleHello, this, std::placeholders::_1);
-    handlers_[2] = std::bind(&GCServer::HandleWelcome, this, std::placeholders::_1);
-    handlers_[3] = std::bind(&GCServer::HandleInventoryRefresh, this, std::placeholders::_1);
-    handlers_[4] = std::bind(&GCServer::HandleEquip, this, std::placeholders::_1);
-    handlers_[5] = std::bind(&GCServer::HandleUnlockCrate, this, std::placeholders::_1);
-    handlers_[6] = std::bind(&GCServer::HandleStorePurchase, this, std::placeholders::_1);
-    handlers_[7] = std::bind(&GCServer::HandleApplySticker, this, std::placeholders::_1);
-    handlers_[8] = std::bind(&GCServer::HandleRemoveSticker, this, std::placeholders::_1);
-    handlers_[9] = std::bind(&GCServer::HandleNameTag, this, std::placeholders::_1);
-    handlers_[10] = std::bind(&GCServer::HandleStatTrakSwap, this, std::placeholders::_1);
-    handlers_[11] = std::bind(&GCServer::HandleGraffiti, this, std::placeholders::_1);
-    handlers_[12] = std::bind(&GCServer::HandleMusicKit, this, std::placeholders::_1);
-    handlers_[13] = std::bind(&GCServer::HandlePatchApply, this, std::placeholders::_1);
-    handlers_[14] = std::bind(&GCServer::HandleSouvenir, this, std::placeholders::_1);
+    handlers_[4001] = std::bind(&GCServer::HandleHello, this, std::placeholders::_1);
+    handlers_[4002] = std::bind(&GCServer::HandleWelcome, this, std::placeholders::_1);
+    handlers_[9109] = std::bind(&GCServer::HandleClientHello, this, std::placeholders::_1);
+    handlers_[1001] = std::bind(&GCServer::HandleSetItemPosition, this, std::placeholders::_1);
+    handlers_[1004] = std::bind(&GCServer::HandleDeleteItem, this, std::placeholders::_1);
+    handlers_[1006] = std::bind(&GCServer::HandleNameItem, this, std::placeholders::_1);
+    handlers_[2534] = std::bind(&GCServer::HandleOpenCrate, this, std::placeholders::_1);
+    handlers_[2531] = std::bind(&GCServer::HandleAdjustEquipSlots, this, std::placeholders::_1);
     
-    printf("[GC] GCServer initialized\n");
+    Log("GCServer initialized for CS2");
 }
 
 void GCServer::Shutdown() {
     initialized_ = false;
     inventory_.clear();
     handlers_.clear();
-    printf("[GC] GCServer shutdown\n");
+    Log("GCServer shutdown");
 }
 
 void GCServer::ProcessMessage(uint32_t msg_type, const void* data, uint32_t size) {
@@ -55,12 +66,12 @@ void GCServer::ProcessMessage(uint32_t msg_type, const void* data, uint32_t size
     if (it != handlers_.end()) {
         it->second(raw_data);
     } else {
-        printf("[GC] Unhandled message type: %u\n", msg_type);
+        Log("Unhandled message type: %u", msg_type);
     }
 }
 
 void GCServer::SendToClient(uint32_t msg_type, const std::string& data) {
-    printf("[GC] Sending message type %u to client, size %zu\n", msg_type, data.size());
+    Log("Sending message type %u to client, size %zu", msg_type, data.size());
 }
 
 std::vector<GCItem> GCServer::GetInventory() {
@@ -95,240 +106,141 @@ void GCServer::EquipItem(uint64_t item_id, bool equipped) {
 void GCServer::HandleHello(const std::string& data) {
     CMsgClientHello hello;
     if (!hello.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgClientHello\n");
+        Log("Failed to parse CMsgClientHello");
         return;
     }
     
     CMsgClientWelcome welcome;
-    welcome.set_server_version(1);
-    welcome.set_session_id(session_id_);
-    welcome.set_inventory_size(static_cast<uint32_t>(inventory_.size()));
+    welcome.set_version(1);
     
     std::string response;
     welcome.SerializeToString(&response);
-    SendToClient(2, response);
-    printf("[GC] Client hello processed, steam_id: %llu\n", hello.steam_id());
+    SendToClient(4002, response);
+    Log("Client hello processed, version: %u", hello.version());
 }
 
 void GCServer::HandleWelcome(const std::string& data) {
-    printf("[GC] Welcome message received\n");
+    Log("Welcome message received");
 }
 
-void GCServer::HandleInventoryRefresh(const std::string& data) {
-    CMsgInventoryFullRefresh refresh;
-    inventory_ = InventoryManager::Instance().GetAllItems();
+void GCServer::HandleClientHello(const std::string& data) {
+    Log("CS2 ClientHello received");
     
-    for (const auto& item : inventory_) {
-        CMsgItem* proto_item = refresh.add_items();
-        proto_item->set_item_id(item.item_id);
-        proto_item->set_def_index(item.def_index);
-        proto_item->set_paint_seed(item.paint_seed);
-        proto_item->set_wear(item.wear);
-        proto_item->set_stattrak_count(item.stattrak_count);
-        for (uint32_t sticker : item.sticker_slots) {
-            proto_item->add_sticker_slots(sticker);
-        }
-        proto_item->set_equipped(item.equipped);
-    }
+    CMsgGCCStrike15_v2_GC2ClientHello response;
+    response.set_account_id(0);
     
-    std::string response;
-    refresh.SerializeToString(&response);
-    SendToClient(3, response);
-    printf("[GC] Inventory refresh sent, items: %zu\n", inventory_.size());
+    std::string resp_data;
+    response.SerializeToString(&resp_data);
+    SendToClient(9110, resp_data);
 }
 
-void GCServer::HandleEquip(const std::string& data) {
-    CMsgEquipItem equip;
-    if (!equip.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgEquipItem\n");
-        return;
-    }
-    
-    EquipItem(equip.item_id(), equip.equipped());
-    printf("[GC] Item %llu equipped: %d\n", equip.item_id(), equip.equipped());
+void GCServer::HandleSetItemPosition(const std::string& data) {
+    Log("SetItemPosition received");
 }
 
-void GCServer::HandleUnlockCrate(const std::string& data) {
-    CMsgUnlockCrate req;
+void GCServer::HandleDeleteItem(const std::string& data) {
+    Log("DeleteItem received");
+}
+
+void GCServer::HandleNameItem(const std::string& data) {
+    Log("NameItem received");
+}
+
+void GCServer::HandleOpenCrate(const std::string& data) {
+    CMsgOpenCrate req;
     if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgUnlockCrate\n");
+        Log("Failed to parse CMsgOpenCrate");
         return;
     }
     
-    GCItem new_item = StoreManager::Instance().OpenCrate(req.crate_def_index(), req.key_def_index());
+    Log("OpenCrate received, tool: %llu, subject: %llu", req.tool_item_id(), req.subject_item_id());
+    
+    GCItem new_item = StoreManager::Instance().OpenCrate(1001, 0);
     if (new_item.def_index != 0) {
         new_item.item_id = next_item_id_++;
         AddItem(new_item);
-        
-        CMsgUnlockCrateResponse resp;
-        CMsgItem* proto_item = resp.mutable_item();
-        proto_item->set_item_id(new_item.item_id);
-        proto_item->set_def_index(new_item.def_index);
-        proto_item->set_paint_seed(new_item.paint_seed);
-        proto_item->set_wear(new_item.wear);
-        proto_item->set_stattrak_count(new_item.stattrak_count);
-        
-        std::string response;
-        resp.SerializeToString(&response);
-        SendToClient(5, response);
-        printf("[GC] Crate unlocked, item: %u\n", new_item.def_index);
-    } else {
-        printf("[GC] Failed to unlock crate\n");
+        Log("Crate opened, got item: %u", new_item.def_index);
     }
 }
 
-void GCServer::HandleStorePurchase(const std::string& data) {
-    CMsgStorePurchase req;
+void GCServer::HandleAdjustEquipSlots(const std::string& data) {
+    CMsgAdjustEquipSlots req;
     if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgStorePurchase\n");
+        Log("Failed to parse CMsgAdjustEquipSlots");
         return;
     }
     
-    uint32_t price = StoreManager::Instance().GetPrice(req.def_index());
-    if (currency_ >= price) {
-        currency_ -= price;
-        GCItem new_item = StoreManager::Instance().PurchaseItem(req.def_index());
-        if (new_item.def_index != 0) {
-            new_item.item_id = next_item_id_++;
-            AddItem(new_item);
+    Log("AdjustEquipSlots received, change_num: %u", req.change_num());
+    for (int i = 0; i < req.slots_size(); ++i) {
+        const CMsgAdjustEquipSlot& slot = req.slots(i);
+        Log("  Slot: class %u, slot %u, item %llu", slot.class_id(), slot.slot_id(), slot.item_id());
+        EquipItem(slot.item_id(), true);
+    }
+}
+
+void GCServer::LoadInventory(const std::string& filepath) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        Log("Inventory file not found, starting with empty inventory");
+        return;
+    }
+    
+    nlohmann::json config;
+    file >> config;
+    file.close();
+    
+    if (config.contains("inventory")) {
+        for (const auto& item_json : config["inventory"]) {
+            GCItem item;
+            item.item_id = item_json.value("id", next_item_id_++);
+            item.def_index = item_json.value("def_index", 0);
+            item.paint_seed = item_json.value("paint_seed", 0);
+            item.wear = item_json.value("wear", 0.0f);
+            item.stattrak_count = item_json.value("stattrak", 0);
+            item.equipped = item_json.value("equipped", false);
             
-            CMsgStorePurchaseResponse resp;
-            resp.set_success(true);
-            CMsgItem* proto_item = resp.mutable_item();
-            proto_item->set_item_id(new_item.item_id);
-            proto_item->set_def_index(new_item.def_index);
-            proto_item->set_paint_seed(new_item.paint_seed);
-            proto_item->set_wear(new_item.wear);
-            
-            std::string response;
-            resp.SerializeToString(&response);
-            SendToClient(6, response);
-            printf("[GC] Store purchase success, item: %u\n", new_item.def_index);
-        }
-    } else {
-        CMsgStorePurchaseResponse resp;
-        resp.set_success(false);
-        std::string response;
-        resp.SerializeToString(&response);
-        SendToClient(6, response);
-        printf("[GC] Store purchase failed, insufficient currency\n");
-    }
-}
-
-void GCServer::HandleApplySticker(const std::string& data) {
-    CMsgApplySticker req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgApplySticker\n");
-        return;
-    }
-    
-    for (auto& item : inventory_) {
-        if (item.item_id == req.item_id()) {
-            if (req.sticker_slot() < item.sticker_slots.size()) {
-                item.sticker_slots[req.sticker_slot()] = req.sticker_def_index();
-                InventoryManager::Instance().UpdateItem(item);
-                printf("[GC] Sticker applied to item %llu, slot %u\n", req.item_id(), req.sticker_slot());
+            if (item_json.contains("stickers")) {
+                for (const auto& sticker : item_json["stickers"]) {
+                    item.sticker_slots.push_back(sticker.get<uint32_t>());
+                }
             }
-            break;
+            inventory_.push_back(item);
         }
     }
-}
-
-void GCServer::HandleRemoveSticker(const std::string& data) {
-    CMsgRemoveSticker req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgRemoveSticker\n");
-        return;
+    
+    if (config.contains("currency")) {
+        currency_ = config["currency"].get<uint32_t>();
     }
     
-    for (auto& item : inventory_) {
-        if (item.item_id == req.item_id()) {
-            if (req.sticker_slot() < item.sticker_slots.size()) {
-                item.sticker_slots[req.sticker_slot()] = 0;
-                InventoryManager::Instance().UpdateItem(item);
-                printf("[GC] Sticker removed from item %llu, slot %u\n", req.item_id(), req.sticker_slot());
-            }
-            break;
-        }
-    }
+    Log("Inventory loaded: %zu items, currency: %u", inventory_.size(), currency_);
 }
 
-void GCServer::HandleNameTag(const std::string& data) {
-    CMsgNameTag req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgNameTag\n");
-        return;
-    }
-    printf("[GC] Name tag applied to item %llu: %s\n", req.item_id(), req.name_tag().c_str());
-}
-
-void GCServer::HandleStatTrakSwap(const std::string& data) {
-    CMsgStatTrakSwap req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgStatTrakSwap\n");
-        return;
-    }
-    
-    uint32_t source_count = 0;
-    uint32_t target_count = 0;
+void GCServer::SaveInventory(const std::string& filepath) {
+    nlohmann::json config;
+    config["inventory"] = nlohmann::json::array();
+    config["currency"] = currency_;
     
     for (const auto& item : inventory_) {
-        if (item.item_id == req.source_item_id()) {
-            source_count = item.stattrak_count;
+        nlohmann::json item_json;
+        item_json["id"] = item.item_id;
+        item_json["def_index"] = item.def_index;
+        item_json["paint_seed"] = item.paint_seed;
+        item_json["wear"] = item.wear;
+        item_json["stattrak"] = item.stattrak_count;
+        item_json["equipped"] = item.equipped;
+        if (!item.sticker_slots.empty()) {
+            item_json["stickers"] = item.sticker_slots;
         }
-        if (item.item_id == req.target_item_id()) {
-            target_count = item.stattrak_count;
-        }
+        config["inventory"].push_back(item_json);
     }
     
-    for (auto& item : inventory_) {
-        if (item.item_id == req.source_item_id()) {
-            item.stattrak_count = target_count;
-            InventoryManager::Instance().UpdateItem(item);
-        }
-        if (item.item_id == req.target_item_id()) {
-            item.stattrak_count = source_count;
-            InventoryManager::Instance().UpdateItem(item);
-        }
+    std::ofstream file(filepath);
+    if (file.is_open()) {
+        file << config.dump(4);
+        Log("Inventory saved: %zu items", inventory_.size());
+    } else {
+        Log("Failed to save inventory");
     }
-    
-    printf("[GC] StatTrak swap between %llu and %llu\n", req.source_item_id(), req.target_item_id());
-}
-
-void GCServer::HandleGraffiti(const std::string& data) {
-    CMsgGraffiti req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgGraffiti\n");
-        return;
-    }
-    printf("[GC] Graffiti applied: %u\n", req.graffiti_def_index());
-}
-
-void GCServer::HandleMusicKit(const std::string& data) {
-    CMsgMusicKit req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgMusicKit\n");
-        return;
-    }
-    printf("[GC] Music kit equipped: %u\n", req.music_kit_def_index());
-}
-
-void GCServer::HandlePatchApply(const std::string& data) {
-    CMsgPatchApply req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgPatchApply\n");
-        return;
-    }
-    printf("[GC] Patch applied: %u to item %llu\n", req.patch_def_index(), req.item_id());
-}
-
-void GCServer::HandleSouvenir(const std::string& data) {
-    CMsgSouvenir req;
-    if (!req.ParseFromString(data)) {
-        printf("[GC] Failed to parse CMsgSouvenir\n");
-        return;
-    }
-    printf("[GC] Souvenir applied: %u\n", req.souvenir_def_index());
 }
 
 }
