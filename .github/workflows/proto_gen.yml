@@ -26,7 +26,7 @@ jobs:
           mkdir -p src/gc/protobufs
           protoc --cpp_out=src/gc/protobufs/ \
                  --proto_path=src/gc/protobufs/ \
-                 src/gc/protobufs/cs2_gc.proto
+                 src/gc/protobufs/*.proto
       
       - name: Check if files changed
         id: check
