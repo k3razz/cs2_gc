@@ -27,6 +27,4 @@ public:
     virtual void EquipItem(uint64_t item_id, bool equipped) = 0;
 };
 
-IGameCoordinator* CreateGameCoordinator();
-
 }
