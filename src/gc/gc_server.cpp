@@ -2,8 +2,7 @@
 #include "protobufs/cs2_gc.pb.h"
 #include "inventory/manager.h"
 #include "store/store.h"
-#include "utils/logging.h"
-#include <random>
+#include "../utils/logging.h"
 #include <chrono>
 
 namespace CS2GC {
@@ -50,10 +49,11 @@ void GCServer::Shutdown() {
     Log("GCServer shutdown");
 }
 
-void GCServer::ProcessMessage(uint32_t msg_type, const std::string& data) {
+void GCServer::ProcessMessage(uint32_t msg_type, const void* data, uint32_t size) {
+    std::string raw_data(static_cast<const char*>(data), size);
     auto it = handlers_.find(msg_type);
     if (it != handlers_.end()) {
-        it->second(data);
+        it->second(raw_data);
     } else {
         Log("Unhandled message type: %u", msg_type);
     }
@@ -61,6 +61,35 @@ void GCServer::ProcessMessage(uint32_t msg_type, const std::string& data) {
 
 void GCServer::SendToClient(uint32_t msg_type, const std::string& data) {
     Log("Sending message type %u to client, size %zu", msg_type, data.size());
+}
+
+std::vector<GCItem> GCServer::GetInventory() {
+    return inventory_;
+}
+
+void GCServer::AddItem(const GCItem& item) {
+    inventory_.push_back(item);
+    InventoryManager::Instance().AddItem(item);
+}
+
+void GCServer::RemoveItem(uint64_t item_id) {
+    for (auto it = inventory_.begin(); it != inventory_.end(); ++it) {
+        if (it->item_id == item_id) {
+            inventory_.erase(it);
+            InventoryManager::Instance().RemoveItem(item_id);
+            break;
+        }
+    }
+}
+
+void GCServer::EquipItem(uint64_t item_id, bool equipped) {
+    for (auto& item : inventory_) {
+        if (item.item_id == item_id) {
+            item.equipped = equipped;
+            InventoryManager::Instance().UpdateItem(item);
+            break;
+        }
+    }
 }
 
 void GCServer::HandleHello(const std::string& data) {
@@ -115,14 +144,8 @@ void GCServer::HandleEquip(const std::string& data) {
         return;
     }
     
-    for (auto& item : inventory_) {
-        if (item.item_id == equip.item_id()) {
-            item.equipped = equip.equipped();
-            InventoryManager::Instance().UpdateItem(item);
-            Log("Item %llu equipped: %d", equip.item_id(), equip.equipped());
-            break;
-        }
-    }
+    EquipItem(equip.item_id(), equip.equipped());
+    Log("Item %llu equipped: %d", equip.item_id(), equip.equipped());
 }
 
 void GCServer::HandleUnlockCrate(const std::string& data) {
@@ -132,11 +155,10 @@ void GCServer::HandleUnlockCrate(const std::string& data) {
         return;
     }
     
-    Item new_item = StoreManager::Instance().OpenCrate(req.crate_def_index(), req.key_def_index());
+    GCItem new_item = StoreManager::Instance().OpenCrate(req.crate_def_index(), req.key_def_index());
     if (new_item.def_index != 0) {
         new_item.item_id = next_item_id_++;
-        inventory_.push_back(new_item);
-        InventoryManager::Instance().AddItem(new_item);
+        AddItem(new_item);
         
         CMsgUnlockCrateResponse resp;
         CMsgItem* proto_item = resp.mutable_item();
@@ -165,11 +187,10 @@ void GCServer::HandleStorePurchase(const std::string& data) {
     uint32_t price = StoreManager::Instance().GetPrice(req.def_index());
     if (currency_ >= price) {
         currency_ -= price;
-        Item new_item = StoreManager::Instance().PurchaseItem(req.def_index());
+        GCItem new_item = StoreManager::Instance().PurchaseItem(req.def_index());
         if (new_item.def_index != 0) {
             new_item.item_id = next_item_id_++;
-            inventory_.push_back(new_item);
-            InventoryManager::Instance().AddItem(new_item);
+            AddItem(new_item);
             
             CMsgStorePurchaseResponse resp;
             resp.set_success(true);
@@ -238,7 +259,6 @@ void GCServer::HandleNameTag(const std::string& data) {
         Log("Failed to parse CMsgNameTag");
         return;
     }
-    
     Log("Name tag applied to item %llu: %s", req.item_id(), req.name_tag().c_str());
 }
 
@@ -252,7 +272,7 @@ void GCServer::HandleStatTrakSwap(const std::string& data) {
     uint32_t source_count = 0;
     uint32_t target_count = 0;
     
-    for (auto& item : inventory_) {
+    for (const auto& item : inventory_) {
         if (item.item_id == req.source_item_id()) {
             source_count = item.stattrak_count;
         }
@@ -281,7 +301,6 @@ void GCServer::HandleGraffiti(const std::string& data) {
         Log("Failed to parse CMsgGraffiti");
         return;
     }
-    
     Log("Graffiti applied: %u", req.graffiti_def_index());
 }
 
@@ -291,7 +310,6 @@ void GCServer::HandleMusicKit(const std::string& data) {
         Log("Failed to parse CMsgMusicKit");
         return;
     }
-    
     Log("Music kit equipped: %u", req.music_kit_def_index());
 }
 
@@ -301,7 +319,6 @@ void GCServer::HandlePatchApply(const std::string& data) {
         Log("Failed to parse CMsgPatchApply");
         return;
     }
-    
     Log("Patch applied: %u to item %llu", req.patch_def_index(), req.item_id());
 }
 
@@ -311,7 +328,6 @@ void GCServer::HandleSouvenir(const std::string& data) {
         Log("Failed to parse CMsgSouvenir");
         return;
     }
-    
     Log("Souvenir applied: %u", req.souvenir_def_index());
 }
 

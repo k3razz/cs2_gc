@@ -12,7 +12,8 @@ class GCServer : public IGameCoordinator {
 public:
     static GCServer& Instance();
     
-    void Initialize(const std::string& config_path) override;
+    void Init(const std::string& config_path);
+    void Initialize(const std::string& config_path) override { Init(config_path); }
     void Shutdown() override;
     void ProcessMessage(uint32_t msg_type, const void* data, uint32_t size) override;
     std::vector<GCItem> GetInventory() override;

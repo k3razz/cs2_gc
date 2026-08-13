@@ -1,5 +1,5 @@
 #include "manager.h"
-#include "../utils/logging.h"
+#include "../../utils/logging.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
 
@@ -25,7 +25,7 @@ void InventoryManager::Load(const std::string& config_path) {
     
     if (config.contains("inventory")) {
         for (const auto& item_json : config["inventory"]) {
-            Item item;
+            GCItem item;
             item.item_id = item_json.value("id", 0);
             item.def_index = item_json.value("def_index", 0);
             item.paint_seed = item_json.value("paint_seed", 0);
@@ -77,16 +77,16 @@ void InventoryManager::Save() {
     version_++;
 }
 
-std::vector<Item> InventoryManager::GetAllItems() {
+std::vector<GCItem> InventoryManager::GetAllItems() {
     return items_;
 }
 
-void InventoryManager::AddItem(const Item& item) {
+void InventoryManager::AddItem(const GCItem& item) {
     items_.push_back(item);
     Save();
 }
 
-void InventoryManager::UpdateItem(const Item& item) {
+void InventoryManager::UpdateItem(const GCItem& item) {
     for (auto& existing : items_) {
         if (existing.item_id == item.item_id) {
             existing = item;
@@ -106,13 +106,13 @@ void InventoryManager::RemoveItem(uint64_t item_id) {
     }
 }
 
-Item InventoryManager::GetItem(uint64_t item_id) {
+GCItem InventoryManager::GetItem(uint64_t item_id) {
     for (const auto& item : items_) {
         if (item.item_id == item_id) {
             return item;
         }
     }
-    return Item();
+    return GCItem();
 }
 
 uint32_t InventoryManager::GetVersion() const {
