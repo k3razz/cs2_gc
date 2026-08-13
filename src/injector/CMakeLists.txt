@@ -9,7 +9,7 @@ target_include_directories(Injector PRIVATE
 )
 
 target_link_libraries(Injector
-    ${CMAKE_BINARY_DIR}/src/gc/Release/GC_Core.lib
+    GC_Core
 )
 
 if (WIN32)
