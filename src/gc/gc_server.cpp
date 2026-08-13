@@ -3,6 +3,7 @@
 #include "store/store.h"
 #include <chrono>
 #include <cstdio>
+#include <cstdarg>
 #include <fstream>
 #include <nlohmann/json.hpp>
 
