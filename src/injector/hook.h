@@ -12,5 +12,5 @@ private:
     HookManager(const HookManager&) = delete;
     HookManager& operator=(const HookManager&) = delete;
     
-    bool installed_;
+    bool installed_ = false;
 };
